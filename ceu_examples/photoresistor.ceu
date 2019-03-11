@@ -1,0 +1,19 @@
+#include "out.ceu"
+#include "wclock.ceu"
+
+output high/low OUT_03;
+var int value;
+
+loop do 
+    {
+        pinMode(A2, INPUT); //photoresistor
+        @value = analogRead(A2);
+    }
+    if(value < 30){   // if it's dark
+        emit OUT_03(high); //light the LED
+    }else{
+        emit OUT_03(low);
+    }
+    await 500ms;
+end
+
