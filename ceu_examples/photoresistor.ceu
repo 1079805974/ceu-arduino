@@ -1,18 +1,22 @@
 #include "out.ceu"
 #include "wclock.ceu"
+#include "usart.ceu"
+#include "adc.ceu"
+#include "string.ceu"
+
 
 output high/low OUT_03;
 var int value = _;
 
-_Serial.begin(9600);
-
-_pinMode(_A2, _INPUT);
+spawn Adc();
+spawn USART_Init(9600);
 
 loop do 
 
-    value = _analogRead(_A2);
-    _Serial.println(value);
-    _Serial.flush();
+    value = await Adc_Conversion(_A2);    
+    var[10] byte str = [];
+    call String_Append_INT(&str, value, _);
+    await USART_Tx(&str);
     if value < 30 then   // if it's dark
         emit OUT_03(high); //light the LED
     else
