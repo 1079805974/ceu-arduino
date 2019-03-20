@@ -1,0 +1,97 @@
+#include "pwm.ceu"
+#include "usart.ceu"
+#include "out.ceu"
+#include "wclock.ceu"
+#include "adc.ceu"
+#include "string.ceu"
+
+native/pre do
+    ##include "Wire.h"
+end
+
+var[50] byte write_buf = _;
+var[50] byte read_buf = _;
+
+native _Wire;
+
+spawn USART_Init(9600);
+_Wire.begin();
+
+code/await Set_Color (var u8 r, var u8 g, var u8 b) -> none 
+do
+    spawn Pwm(3, 255 - r);
+    spawn Pwm(5, 255 - g);
+    spawn Pwm(6, 255 - b);
+end
+
+code/call Read_Sensor (none) -> int
+do
+    var int value = _;
+    {
+        Wire.beginTransmission(0x23);
+        Wire.write(0x10);
+        Wire.endTransmission();
+        delay(120);
+        Wire.requestFrom(0x23, 2);
+        for (@value = 0; Wire.available() >= 1; ) {
+            char c = Wire.read();
+            @value = (@value << 8) + (c & 0xFF);
+        }
+        @value = @value / 1.2;
+    }
+    escape value;
+end
+
+code/await Send_Msg (none) -> none
+do
+    call String_Append_STR(&outer.write_buf, "\n\r");
+    await USART_Tx(&outer.write_buf);
+    outer.write_buf = [];
+end
+
+code/await Handle_Msg(none) -> none
+do
+    var[50] byte str = [] .. outer.read_buf;
+    await USART_Tx(&str);
+    var byte r = str[0];
+    var byte g = str[1];
+    var byte b = str[2];
+    //await Set_Color(r, g, b);
+    var[50] byte str2 = [r, g, b];
+    await USART_Tx(&str2);
+    //outer.read_buf = [];
+end
+
+loop do
+    // par/or do
+    //     var int value = call Read_Sensor();
+    //     call String_Append_INT(&write_buf, value, _);
+    //     await Send_Msg();
+    //     await 1s;
+    // with
+    var int i = _;
+    event none e;
+    //read_buf = [12,43,22];
+    // par/and do
+    //     loop i in [0->255] do
+    //         spawn Pwm(3, i);
+    //         await 5ms;
+    //     end
+    //     loop i in [0<-255] do
+    //         spawn Pwm(3, i);
+    //         await 5ms;
+    //     end
+    //     emit e;
+    // with
+    //     watching e do
+    await USART_Rx(&read_buf, _);
+    //call String_Append_STR(&read_buf,"\n\r");
+    await Handle_Msg();
+    //read_buf = [98,99,100,0];
+    //await USART_Tx(&read_buf);
+    read_buf = [];
+    //     end
+    // end
+        //spawn Handle_Msg();
+    //end
+end
