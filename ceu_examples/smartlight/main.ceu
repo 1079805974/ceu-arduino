@@ -9,8 +9,8 @@ native/pre do
     ##include "Wire.h"
 end
 
-var[50] byte write_buf = _;
-var[50] byte read_buf = _;
+var[20] byte write_buf = _; 
+var[20] byte read_buf = _;
 
 native _Wire;
 
@@ -18,6 +18,9 @@ spawn USART_Init(9600);
 
 _Wire.begin();
 
+/*
+An util function parse byte to lightness 0 ~ 255.
+    */
 code/call ByteToLightness(var byte inValue) -> u8 
 do
     if inValue >= 0 then
@@ -27,6 +30,14 @@ do
     end
 end
 
+/*
+Set color by RGB number.
+
+@param {u8} r red LED ligthness
+@param {u8} g green LED ligthness
+@param {u8} b blue LED ligthness
+
+    */
 code/await Set_Color (var u8 r, var u8 g, var u8 b) -> none 
 do
     spawn Pwm(3, 255 - r);
@@ -34,6 +45,12 @@ do
     spawn Pwm(6, 255 - b);
 end
 
+/*
+Get the value from GY30 sensor. 
+
+@return {int} lightness 0 ~ 65535
+
+    */
 code/call Read_Sensor (none) -> int
 do
     var int value = _;
@@ -52,14 +69,20 @@ do
     escape value;
 end
 
+/*
+Send the data in write_buf and clear it.
+    */
 code/await Send_Msg (none) -> none
 do
     outer.write_buf = outer.write_buf .. [0];
-    call String_Append_STR(&outer.write_buf, "\n\r");
+    call String_Append_STR(&outer.write_buf, "\n");
     await USART_Tx(&outer.write_buf);
     outer.write_buf = [];
 end
 
+/*
+Set LED color using read_buf and clear read_buf.
+    */
 code/await Handle_Msg(none) -> none
 do
     var u8 r = call ByteToLightness(outer.read_buf[0]);
