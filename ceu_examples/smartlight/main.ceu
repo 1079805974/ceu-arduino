@@ -40,9 +40,12 @@ Set color by RGB number.
     */
 code/await Set_Color (var u8 r, var u8 g, var u8 b) -> none 
 do
-    spawn Pwm(3, 255 - r);
-    spawn Pwm(5, 255 - g);
-    spawn Pwm(6, 255 - b);
+    // spawn Pwm(3, 255 - r);
+    // spawn Pwm(5, 255 - g);
+    // spawn Pwm(6, 255 - b);
+    emit PWM(3, 255 - r);
+    emit PWM(5, 255 - g);
+    emit PWM(6, 255 - b);
 end
 
 /*
@@ -51,14 +54,16 @@ Get the value from GY30 sensor.
 @return {int} lightness 0 ~ 65535
 
     */
-code/call Read_Sensor (none) -> int
+code/await Read_Sensor (none) -> int
 do
     var int value = _;
     {
         Wire.beginTransmission(0x23);
         Wire.write(0x10);
         Wire.endTransmission();
-        delay(120);
+    }
+    await 120ms;
+    {   
         Wire.requestFrom(0x23, 2);
         for (@value = 0; Wire.available() >= 1; ) {
             char c = Wire.read();
@@ -94,18 +99,17 @@ end
 
 event none e;
 
-loop do
-    par/and do
-        var int value = call Read_Sensor();
+par do
+    loop do
+        var int value = await Read_Sensor();
         write_buf = write_buf .. [0];
         call String_Append_INT(&write_buf, value, _);
         await Send_Msg();
         await 1s;
-        emit e;
-    with
-        watching e do
-            await USART_Rx(&read_buf, 4);
-            await Handle_Msg();
-        end
+    end
+with
+    loop do
+        await USART_Rx(&read_buf, 4);
+        await Handle_Msg();
     end
 end
