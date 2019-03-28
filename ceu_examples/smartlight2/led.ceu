@@ -1,0 +1,151 @@
+#include "wclock.ceu"
+#include "string.ceu"
+#include "usart.ceu"
+#include "pwm.ceu"
+
+native/pre do
+    ##include "Wire.h"
+end
+
+var[20] byte write_buf = _; 
+var[20] byte read_buf = _;
+
+native _Wire;
+
+spawn USART_Init(9600);
+
+_Wire.begin();
+
+var u8 red_light = 0;
+var u8 green_light = 0;
+var u8 blue_light = 0;
+var u8 level = 0;
+var[3] u8 color = [255, 255,255];
+
+code/call Max(var u8 r, var u8 b, var u8 g) -> u8
+do
+    if r > b then
+        if r > g then
+            escape r;
+        else
+            escape g;
+        end
+    else
+        if b > g then
+            escape b;
+        else
+            escape g;
+        end
+    end
+end
+
+/*
+An util function parse byte to lightness 0 ~ 255.
+    */
+code/call ByteToLightness(var byte inValue) -> u8 
+do
+    if inValue >= 0 then
+        escape inValue as u8;
+    else
+        escape (inValue + 256) as u8;
+    end
+end
+
+/*
+Set color by RGB number.
+
+@param {u8} r red LED ligthness
+@param {u8} g green LED ligthness
+@param {u8} b blue LED ligthness
+
+    */
+code/call Set_Color (var u8 r, var u8 g, var u8 b) -> none 
+do
+    outer.red_light = 255 - r;
+    outer.green_light = 255 - g;
+    outer.blue_light = 255 -b;
+    var r32 ratio = 255 / (call Max(r, g, b) as r32);
+    outer.color = [(r * (ratio as u8)) as u8, (g * (ratio as u8)) as u8, (b * (ratio as u8)) as u8];
+    emit PWM(3, outer.red_light);
+    emit PWM(5, outer.green_light);
+    emit PWM(6, outer.blue_light);
+end
+
+/*
+Get the value from GY30 sensor. 
+
+@return {int} lightness 0 ~ 65535
+
+    */
+code/await Read_Sensor (none) -> int
+do
+    var int value = _;
+    {
+        Wire.beginTransmission(0x23);
+        Wire.write(0x10);
+        Wire.endTransmission();
+    }
+    await 120ms;
+    {   
+        Wire.requestFrom(0x23, 2);
+        for (@value = 0; Wire.available() >= 1; ) {
+            char c = Wire.read();
+            @value = (@value << 8) + (c & 0xFF);
+        }
+        @value = @value / 1.2;
+    }
+    escape value;
+end
+
+/*
+Send the data in write_buf and clear it.
+    */
+code/await Send_Msg (none) -> none
+do
+    outer.write_buf = outer.write_buf .. [0];
+    call String_Append_STR(&outer.write_buf, "\n");
+    await USART_Tx(&outer.write_buf);
+    outer.write_buf = [];
+end
+
+/*
+Set LED color using read_buf and clear read_buf.
+    */
+code/await Handle_Msg(none) -> none
+do
+    var u8 r = call ByteToLightness(outer.read_buf[0]);
+    var u8 g = call ByteToLightness(outer.read_buf[1]); 
+    var u8 b = call ByteToLightness(outer.read_buf[2]);
+    call Set_Color(r, g, b);
+    outer.read_buf = [];
+end
+
+code/await Await_1_Min(none) -> none
+do
+    await 4s;
+    await 4s;
+    await 4s;
+    await 4s;
+    await 4s;
+
+    await 4s;
+    await 4s;
+    await 4s;
+    await 4s;
+    await 4s;
+
+    await 4s;
+    await 4s;
+    await 4s;
+    await 4s;
+    await 4s;
+end
+
+code/await Await_5_Min(none) -> none
+do
+    await Await_1_Min();
+    await Await_1_Min();
+    await Await_1_Min();
+    await Await_1_Min();
+    await Await_1_Min();
+end

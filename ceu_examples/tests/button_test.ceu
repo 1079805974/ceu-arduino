@@ -1,0 +1,28 @@
+#include "out.ceu"
+#include "int0.ceu"
+#include "usart.ceu"
+#include "wclock.ceu"
+
+output high/low OUT_13;
+
+var[20] byte write_buf = [].."hello\n"; 
+var[20] byte write_buf2 = [].."22222\n"; 
+
+spawn USART_Init(9600);
+
+loop do
+    await INT0;
+    if high == call INT0_Get() then
+        await 400ms;
+        if low == call INT0_Get() then
+            await USART_Tx(&write_buf);
+        else
+            watching INT0 do
+                loop do
+                    await USART_Tx(&write_buf2);
+                    await 1s;
+                end
+            end
+        end
+    end
+end

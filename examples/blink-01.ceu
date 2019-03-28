@@ -4,7 +4,21 @@
 output high/low OUT_05;
 
 par/or do
-     await 1min;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
+     await 4s;
 with
     loop do
         emit OUT_05(low);

@@ -1,0 +1,17 @@
+#include "out.ceu"
+#include "int0.ceu"
+#include "wclock.ceu"
+
+_Serial.begin(9600);
+
+loop do
+    await INT0;
+    if (high == call INT0_Get()) then
+        _Serial.println("HIGH");
+        _Serial.flush();
+    else
+        _Serial.println("LOW");
+        _Serial.flush();
+    end
+    await 50ms;
+end

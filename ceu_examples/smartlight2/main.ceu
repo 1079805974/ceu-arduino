@@ -1,0 +1,115 @@
+#include "pcint1.ceu"
+#include "int0.ceu"
+#include "out.ceu"
+#include "led.ceu"
+
+//#define DEBUG 0
+
+//#ifdef DEBUG
+    var[50] byte debug_buf = []; 
+//#endif
+
+event int lightness_read;
+event none person_come;
+event none person_leave;
+
+code/call Set_Level(var u8 l) -> none
+do
+    var u8 r = outer.color[0] / 5 * l;
+    var u8 g = outer.color[0] / 5 * l;
+    var u8 b = outer.color[0] / 5 * l;
+    outer.red_light = 255 - r;
+    outer.green_light = 255 - g;
+    outer.blue_light = 255 -b;
+    emit PWM(3, outer.red_light);
+    emit PWM(5, outer.green_light);
+    emit PWM(6, outer.blue_light);  
+end
+
+code/call Button_Click(none) -> none
+do
+    outer.level = (outer.level + 1) % 5;
+    call Set_Level(outer.level);
+#ifdef DEBUG
+    outer.debug_buf = [].."Button clicked"; 
+    call String_Append_STR(&outer.debug_buf, "\n");
+    await USART_Tx(&outer.debug_buf);
+#endif    
+end
+
+code/await Button_Pushing(none) -> none
+do
+//#ifdef DEBUG
+    outer.debug_buf = [].."Button Pushed"; 
+    call String_Append_STR(&outer.debug_buf, "\n");
+    await USART_Tx(&outer.debug_buf);
+//#endif   
+    var u8 r;
+    var u8 g;
+    var u8 b;
+    loop r in [0->255] do
+        loop g in [0->255] do
+            loop b in [0->255] do
+                call Set_Color(r, g, b);
+                await 15ms;
+            end
+        end
+    end
+end
+
+code/call Is_ON(none) -> bool
+do
+    escape (outer.red_light + outer.blue_light + outer.green_light) as bool;
+end
+
+par do
+    loop do
+        await INT0;
+        if high == call INT0_Get() then
+            await 200ms;
+            if low == call INT0_Get() then
+                call Button_Click();
+                #ifdef DEBUG
+                    debug_buf = [].."Set level to:";
+                    call String_Append_INT(&debug_buf, level as int, _);
+                    call String_Append_STR(&debug_buf, "\n");
+                    await USART_Tx(&debug_buf);
+                #endif  
+            else
+                watching INT0 do
+                    loop do
+                        await Button_Pushing();
+                    end
+                end
+                #ifdef DEBUG
+                    debug_buf = [].."Button Released"; 
+                    call String_Append_STR(&debug_buf, "\n");
+                    await USART_Tx(&debug_buf);
+                #endif 
+            end
+        end
+    end
+//with
+    // loop do
+    //     await INT0;
+    //     if (high == call INT0_Get()) then
+    //         emit person_come;
+    //     else
+    //         emit person_leave;
+    //     end
+    //     await 50ms;
+    // end
+// with
+//     loop do
+//         var int value = await Read_Sensor();
+//         write_buf = write_buf .. [0];
+//         call String_Append_INT(&write_buf, value, _);
+//         await Send_Msg();
+//         await 4s;
+//     end
+with
+    loop do
+        await USART_Rx(&read_buf, 4);
+        await Handle_Msg();
+    end
+end 
