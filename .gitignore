@@ -10,3 +10,4 @@ _ceu_*
 *.o
 *.hex
 *.elf
+.vscode
