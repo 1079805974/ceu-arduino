@@ -28,7 +28,7 @@ var int mode = {TWI_MODE_NONE};// 0 for Write and 1 for Read
 
 native/pre do
     ##include <compat/twi.h>
-    //#include "print_status.h"   // include for printing the status
+    #include "print_status.h"   // include for printing the status
 
     enum {
         TWI_ERR_NONE = 0,
@@ -69,6 +69,17 @@ output (on/off v, u8? address) I2C do
         }
     end
 end
+
+code/call I2C_Start (var u8? address) -> none do
+    if address? then
+        {TWAR = @(address!) << 1;}
+    end
+    TWBR = ((F_CPU / 100000L) - 16) / 2; // Bit rate formula
+    digitalWrite(SDA, 1);
+    digitalWrite(SCL, 1);
+    TWCR = (1 << TWEA) | (1 << TWEN) | (1<<TWIE) | (1<<TWINT); // send ack
+end
+
 
 output (u8 address) I2C_MASTER_SEND do    
     outer.tx_buf_len = $outer.tx_buf as u8; // set tx_buf_len to buffer length
@@ -224,17 +235,17 @@ spawn async/isr [_TWI_vect] do
     if done then
         if outer.mode != {TWI_MODE_NONE} then
             if outer.mode == {TWI_MODE_WRITE_SLAVE} or outer.mode == {TWI_MODE_WRITE_MASTER} then
-                emit I2C_DONE((outer.tx_buf_len - ($outer.tx_buf as u8)),errorcode);
+//                emit I2C_DONE((outer.tx_buf_len - ($outer.tx_buf as u8)), errorcode);
                 outer.tx_buf = [];
             else
                 if outer.mode == {TWI_MODE_READ_MASTER} then
-                    emit I2C_DONE(($outer.rx_buf) as u8,errorcode);
+//                    emit I2C_DONE(($outer.rx_buf) as u8,errorcode);
                 else
-                    emit I2C_SLAVE_RECEIVE(($outer.rx_buf) as u8,errorcode);
+//                    emit I2C_SLAVE_RECEIVE(($outer.rx_buf) as u8,errorcode);
                 end
             end
         else
-            emit I2C_DONE(0,errorcode);
+//            emit I2C_DONE(0,errorcode);
         end
         
         if outer.mode & 2 == 0 then // if master

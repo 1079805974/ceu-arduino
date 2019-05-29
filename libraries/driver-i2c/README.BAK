@@ -1,57 +1,13 @@
-# I2C (TWI)
-This driver can be used to communicate via TWI between microcontrollers, compatible with I2C.
-
-## Pins
-
-```
-Board	              I2C / TWI pins
-Uno, Ethernet	      A4 (SDA), A5 (SCL)
-Mega2560	      20 (SDA), 21 (SCL)
-Leonardo	      2 (SDA), 3 (SCL)
-Due	              20 (SDA), 21 (SCL), SDA1, SCL1
-```
+# TWI (I2C)
+This driver can be used to communicate via TWI between microcontrollers, compatible with I2C
 
 ## API
 
 ### Includes
 
-```ceu
-#include "i2c.ceu"
 ```
-
-```ceu
-code/call I2C_Start (var u8? address) -> none;
-code/call I2C_End () -> none;
-code/await I2C_Request  (var&[] byte buf, var u8 address, var usize? n) -> none;
-code/await I2C_Write  (var&[] byte buf, var u8? address) -> none;
-code/call I2C_Set_Clock (u32) -> none;
-
+#include "spi.ceu"
 ```
-### Code Abstractions
-
-#### I2C_Begin
-
-Sets up an SPI transaction with the given parameters.
-
-```ceu
-code/await I2C_Begin (var u8? address) -> NEVER;
-```
-
-Parameters:
-
-- `u32`:  transmission frequency
-- `u8`:   byte order (`SPI_LSBFIRST`, `SPI_MSBFIRST`)
-- `u8`:   mode of operation (`SPI_MODE0`, `SPI_MODE1`, `SPI_MODE2`, `SPI_MODE3`)
-- `int?`: chip select `cs`  pin (active `high`)
-- `int?`: chip select `csn` pin (active `low`)
-
-The chip select pins are optional, but at most one may be set.
-
-Return:
-
-- `NEVER`: never returns
-
-SPI transactions cannot be concurrent and must be serialized accordingly.
 
 ## Summary
 
