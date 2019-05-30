@@ -74,10 +74,12 @@ code/call I2C_Start (var u8? address) -> none do
     if address? then
         {TWAR = @(address!) << 1;}
     end
-    TWBR = ((F_CPU / 100000L) - 16) / 2; // Bit rate formula
-    digitalWrite(SDA, 1);
-    digitalWrite(SCL, 1);
-    TWCR = (1 << TWEA) | (1 << TWEN) | (1<<TWIE) | (1<<TWINT); // send ack
+    {
+        TWBR = ((F_CPU / 100000L) - 16) / 2; // Bit rate formula
+        digitalWrite(SDA, 1);
+        digitalWrite(SCL, 1);
+        TWCR = (1 << TWEA) | (1 << TWEN) | (1<<TWIE) | (1<<TWINT); // send ack
+    }
 end
 
 

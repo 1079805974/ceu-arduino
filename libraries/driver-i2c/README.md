@@ -37,7 +37,12 @@ Parameters:
 
 Stop I2C transmit
 ```ceu
-code/call I2C_Stop () -> none
+code/call I2C_Stop (none) -> none
+```
+
+#### or I2C ?
+```ceu
+code/await I2C (var u8? address) -> NEVER
 ```
 
 #### I2C_Read
