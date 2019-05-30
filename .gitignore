@@ -11,3 +11,4 @@ _ceu_*
 *.hex
 *.elf
 !libraries/*i2c*/
+Makefile.conf
