@@ -88,18 +88,43 @@ code/call I2C_Stop(none) -> none do
     }
 end
 
-code/await I2C_Write (var&[] byte buf, var u8 address) -> none do
-    outer.tx_buf = [] .. buf;
+code/await I2C_Slave_Write(none) -> none do
+    await I2C_SLAVE_SEND_ACKED;
+    emit I2C_SLAVE_SEND;
+    await I2C_DONE;
+end
+
+code/await I2C_Slave_Read(none) -> none do
+    await I2C_SLAVE_RECEIVE; 
+end
+
+code/await I2C_Master_Write (var u8 address) -> none do
     emit I2C_MASTER_SEND(address);
     await I2C_DONE;
 end
 
-code/await I2C_Read  (var&[] byte buf, var u8 address, var usize len) -> none do
-    emit I2C_MASTER_RECEIVE(address, len);
+code/await I2C_Master_Read (var u8 address, var usize len) -> none do
+    emit I2C_MASTER_RECEIVE(address, len as u8);
     await I2C_DONE;
-    buf = buf .. outer.rx_buf;
 end
 
+code/await I2C_Write (var&[] byte buf, var u8? address) -> none do
+    outer.tx_buf = [] .. buf;
+    if address? then
+        await I2C_Master_Write(address!);
+    else
+        await I2C_Slave_Write();
+    end
+end
+
+code/await I2C_Read (var&[] byte buf, var u8? address, var usize? len) -> none do
+    if address? then
+        await I2C_Master_Read(address!, len!);
+    else
+        await I2C_Slave_Read();
+    end
+    buf = [] .. outer.rx_buf;
+end
 
 code/call I2C_Set_Clock (var u32 clock) -> none do 
     outer.clock = clock;

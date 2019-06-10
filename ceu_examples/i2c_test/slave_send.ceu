@@ -5,9 +5,14 @@ _Serial.begin(9600);
 
 emit I2C(on,8);
 
+// loop do
+//     await I2C_SLAVE_SEND_ACKED;
+//     tx_buf = [4,5,6,7,8,9]; // transmit buffer contains values to transfer
+//     emit I2C_SLAVE_SEND; // send the data to master
+//     await I2C_DONE; // await for the request to be completed
+// end
+
 loop do
-    await I2C_SLAVE_SEND_ACKED;
-    tx_buf = [4,5,6,7,8,9]; // transmit buffer contains values to transfer
-    emit I2C_SLAVE_SEND; // send the data to master
-    await I2C_DONE; // await for the request to be completed
+    var[20] byte str = [].."helloolleh";
+    await I2C_Write(&str, _);
 end
