@@ -1,6 +1,6 @@
 #include "i2c.ceu"
 #include "wclock.ceu"
-emit I2C(on,_);
+emit I2C(on, _);
 _Serial.begin(9600);
 loop do
     _Serial.println("rx_buf[i-1]");

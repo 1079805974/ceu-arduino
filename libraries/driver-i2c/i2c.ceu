@@ -12,8 +12,6 @@ input none I2C_SLAVE_SEND_ACKED;          // emitted when the master addresses t
 output none I2C_SLAVE_SEND;               // emit this output to send data that's in the tx_buf.
 input none I2C_SLAVE_RECEIVE;          // await this input to receive data from the master, returns number of bytes and errorcode.
 
-input none I2C_SLAVE_REQUESTED;
-
 //input to await the completion of transfer
 
 input none I2C_DONE;                  // this input is emitted once the transfer of data is complete. The values returned are number of bytes and errorcode respectively.
@@ -26,8 +24,8 @@ var[BUF_MAX] byte rx_buf;// receive buffer
 
 code/call I2C_Start (none) -> none;
 code/call I2C_Stop (none) -> none;
-code/await I2C_Read  (var&[] byte buf, var u8? address, var usize? len) -> none;
-code/await I2C_Write (var&[] byte buf, var u8? address) -> none;
+code/await I2C_Read  (var&[] byte buf, var u8 address, var usize len) -> none;
+code/await I2C_Write (var&[] byte buf, var u8 address) -> none;
 code/call I2C_Set_Clock (var u32 clock) -> none;
 
 var u8 len = _;
