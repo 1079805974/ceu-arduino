@@ -1,0 +1,14 @@
+#include "i2c.ceu"
+#include "wclock.ceu"
+
+_Serial.begin(9600);
+
+var u8 a = 1;
+{
+    switch(@a){
+        case 1:
+            Serial.println("1");
+        break;
+    }
+}
+

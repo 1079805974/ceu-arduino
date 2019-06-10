@@ -1,6 +1,0 @@
-#include "i2c.ceu"
-#include "wclock.ceu"
-
-call I2C_Start();
-var[20] byte str = [].."Hello World!\r\n";
-await I2C_Write (&str, 8);

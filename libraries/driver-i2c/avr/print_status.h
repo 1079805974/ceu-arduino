@@ -1,4 +1,4 @@
-#define s(i) Serial.println(i)
+#define s(i) Serial.println(i);Serial.flush();
 
 void print_stat(int x){
   switch(x){

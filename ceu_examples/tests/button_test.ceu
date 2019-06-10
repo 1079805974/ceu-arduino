@@ -8,7 +8,7 @@ output high/low OUT_13;
 var[20] byte write_buf = [].."hello\n"; 
 var[20] byte write_buf2 = [].."22222\n"; 
 
-spawn USART_Init(9600);
+USART_Init(9600);
 
 loop do
     await INT0;
