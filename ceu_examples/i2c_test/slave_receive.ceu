@@ -3,15 +3,11 @@
 
 _Serial.begin(9600);
 
-emit I2C(on,8);
-// loop do
-//     await I2C_SLAVE_RECEIVE;              // await for the Slave receive to be completed
-//     var u8 i;
-//     loop i in [1-> $rx_buf as u8] do
-//         _Serial.println(rx_buf[i-1]);
-//         _Serial.flush();
-//     end
-// end
+emit I2C(on, 8);
+
+/*
+Wait for master data filling 'str' array. And print data.
+ */
 
 loop do
     var[20] byte str = [];
@@ -22,3 +18,13 @@ loop do
         _Serial.flush();
     end
 end
+
+//As same as below
+// loop do
+//     await I2C_SLAVE_RECEIVE;             
+//     var u8 i;
+//     loop i in [1-> $rx_buf as u8] do
+//         _Serial.println(rx_buf[i-1]);
+//         _Serial.flush();
+//     end
+// end
