@@ -17,7 +17,7 @@ input none I2C_SLAVE_RECEIVE;          // await this input to receive data from 
 input none I2C_DONE;                  // this input is emitted once the transfer of data is complete. The values returned are number of bytes and errorcode respectively.
 
 // buffers:
-#define BUF_MAX 32 // maximum buffer length
+#define BUF_MAX 20 // maximum buffer length
 var[BUF_MAX*] byte tx_buf;// transmit buffer
 var[BUF_MAX] byte rx_buf;// receive buffer
 

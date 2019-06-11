@@ -28,7 +28,7 @@ var int mode = {TWI_MODE_NONE};// 0 for Write and 1 for Read
 
 native/pre do
     ##include <compat/twi.h>
-    #include "print_status.h"   // include for printing the status
+    //#include "print_status.h"   // include for printing the status
 
     enum {
         TWI_ERR_NONE = 0,
@@ -173,7 +173,7 @@ spawn async/isr [_TWI_vect] do
     var bool txed = false;
     var bool rxed = false;
     {
-        print_stat(TW_STATUS); // uncomment to print the status
+        //print_stat(TW_STATUS); // uncomment to print the status
         switch(TW_STATUS){
             case TW_START:
             case TW_REP_START:
