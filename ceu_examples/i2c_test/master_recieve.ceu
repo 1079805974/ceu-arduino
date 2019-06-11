@@ -13,7 +13,7 @@ _Serial.begin(9600);
 
 loop do
         var[20] byte str = [];
-        await I2C_Read(&str, 8, _);
+        await I2C_Read(&str, 8, 4);
         var u8 i;
         loop i in [1-> $str as u8] do
             _Serial.println(rx_buf[i-1]);
