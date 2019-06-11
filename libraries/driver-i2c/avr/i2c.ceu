@@ -214,7 +214,7 @@ spawn async/isr [_TWI_vect] do
                 }
                 break;
             case TW_MR_DATA_NACK:
-                @value = TWDR;
+                @value = -1;
                 @done = 0;
                 TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWEA) | _BV(TWINT) | _BV(TWSTO);//send stop
                 break;
