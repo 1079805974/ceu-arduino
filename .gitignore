@@ -12,3 +12,4 @@ _ceu_*
 *.elf
 !libraries/*i2c*/
 Makefile.conf
+.vscode/
