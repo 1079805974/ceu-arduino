@@ -1,32 +1,22 @@
+#define BUF_MAX 20 // maximum buffer length
+
 output (on/off,u8?) I2C; // on/off of I2C with optional variable address
 
-// master:
-
-output u8 I2C_MASTER_SEND;                // master requests to send size of tx_buf number of bytes to slave with the address mentioned in the parameter
-output (u8,u8) I2C_MASTER_RECEIVE;        // master requests certain amount of data from slave with address equal to the second parameter.
-
-
-//slave:
-
-input none I2C_SLAVE_SEND_ACKED;          // emitted when the master addresses this device with a send request.
-output none I2C_SLAVE_SEND;               // emit this output to send data that's in the tx_buf.
-input none I2C_SLAVE_RECEIVE;          // await this input to receive data from the master, returns number of bytes and errorcode.
-
-//input to await the completion of transfer
-
-input none I2C_DONE;                  // this input is emitted once the transfer of data is complete. The values returned are number of bytes and errorcode respectively.
-
-// buffers:
-#define BUF_MAX 20 // maximum buffer length
-var[BUF_MAX*] byte tx_buf;// transmit buffer
-var[BUF_MAX] byte rx_buf;// receive buffer
-
-
-code/call I2C_Start (none) -> none;
-code/call I2C_Stop (none) -> none;
-code/await I2C_Read  (var&[] byte buf, var u8? address, var usize? len) -> none;
-code/await I2C_Write (var&[] byte buf, var u8? address) -> none;
 code/call I2C_Set_Clock (var u32 clock) -> none;
 
-var u8 len = _;
-var u8 errno = _;
+//Should these two API public or internal? 
+code/await I2C_Read  (var&[] byte buf, var u8? address, var usize? len) -> bool;
+code/await I2C_Write (var&[] byte buf, var u8? address) -> bool;
+
+//master API
+code/await I2C_Master_Recieve(var&[] byte buf, var u8 address, var usize len) -> bool;
+code/await I2C_Master_Send(var&[] byte buf, var u8 address) -> bool;
+
+//slave API
+input none I2C_SLAVE_RECIEVE_REQUESTED;
+code/await I2C_Slave_Recieve(var&[] byte buf) -> bool;
+
+input none I2C_SLAVE_SEND_REQUESTED;
+code/await I2C_Slave_Send(var&[] byte buf) -> bool;
+
+var u8 i2c_errno = _;
