@@ -4,17 +4,13 @@ output (on/off,u8?) I2C; // on/off of I2C with optional variable address
 
 code/call I2C_Set_Clock (var u32 clock) -> none;
 
-//Should these two API public or internal? 
-code/await I2C_Read  (var&[] byte buf, var u8? address, var usize? len) -> bool;
-code/await I2C_Write (var&[] byte buf, var u8? address) -> bool;
-
 //master API
-code/await I2C_Master_Recieve(var&[] byte buf, var u8 address, var usize len) -> bool;
+code/await I2C_Master_Receive(var&[] byte buf, var u8 address, var usize len) -> bool;
 code/await I2C_Master_Send(var&[] byte buf, var u8 address) -> bool;
 
 //slave API
-input none I2C_SLAVE_RECIEVE_REQUESTED;
-code/await I2C_Slave_Recieve(var&[] byte buf) -> bool;
+input none I2C_SLAVE_RECEIVE_REQUESTED;
+code/await I2C_Slave_Receive(var&[] byte buf) -> bool;
 
 input none I2C_SLAVE_SEND_REQUESTED;
 code/await I2C_Slave_Send(var&[] byte buf) -> bool;

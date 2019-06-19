@@ -1,0 +1,30 @@
+#include "i2c.ceu"
+#include "wclock.ceu"
+
+var u8 address = 0x23;
+emit I2C(on, _);
+_Serial.begin(9600);
+var[20] byte cmd = [0x01];
+var[2] byte recieve = [];
+
+loop do
+    cmd = [0x01];
+    await I2C_Master_Send(&cmd, address);
+    cmd = [0x20];
+    await I2C_Master_Send(&cmd, address);
+    await 129ms;
+    await I2C_Master_Receive(&recieve, address, 2);
+    if recieve[0] == 0 then
+        _Serial.println(recieve[1]);
+        _Serial.flush();
+    else
+        _Serial.print("add");
+        _Serial.flush();
+        var u32 result = ((recieve[0] * 256)as u32) + (recieve[1] as u32);
+        _Serial.println(result);
+        _Serial.flush();
+    end
+    // _Serial.println($recieve);
+    // _Serial.flush();
+    await 1s;
+end

@@ -7,13 +7,15 @@ emit I2C(on, 8);
 
 par do
     loop do
+        await I2C_SLAVE_RECEIVE_REQUESTED;
         var[20] byte str = [];
-        await I2C_Read(&str, _, _);
+        await I2C_Slave_Receive(&str);
         await USART_Tx(&str);
     end
 with
     loop do
+        await I2C_SLAVE_SEND_REQUESTED;
         var[20] byte str = [].."I'm Slave!\n";
-        await I2C_Write(&str, _);
+        await I2C_Slave_Send(&str);
     end
 end

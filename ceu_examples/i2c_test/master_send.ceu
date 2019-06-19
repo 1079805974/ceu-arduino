@@ -10,7 +10,7 @@ Send data in buf to slave on address 8
 
 loop do
     var[5] byte buf = [0,1,2,3,4];
-    await I2C_Write(&buf, 8);
+    await I2C_Master_Send(&buf, 8);
     await 1s;
 end
 
