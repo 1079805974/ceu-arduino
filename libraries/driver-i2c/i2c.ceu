@@ -5,8 +5,8 @@ output (on/off,u8?) I2C; // on/off of I2C with optional variable address
 code/call I2C_Set_Clock (var u32 clock) -> none;
 
 //master API
-code/await I2C_Master_Receive(var&[] byte buf, var u8 address, var usize len) -> bool;
-code/await I2C_Master_Send(var&[] byte buf, var u8 address) -> bool;
+code/await I2C_Master_Receive(var&[] byte buf, var byte address, var usize len) -> bool;
+code/await I2C_Master_Send(var&[] byte buf, var byte address) -> bool;
 
 //slave API
 input none I2C_SLAVE_RECEIVE_REQUESTED;

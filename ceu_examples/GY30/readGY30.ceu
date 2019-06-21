@@ -1,8 +1,6 @@
-#include "i2c.ceu"
-#include "wclock.ceu"
+#include "GY30.ceu"
 
 var u8 address = 0x23;
-emit I2C(on, _);
 _Serial.begin(9600);
 var[20] byte cmd = [0x01];
 var[2] byte recieve = [];
