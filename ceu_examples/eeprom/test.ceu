@@ -1,0 +1,62 @@
+#include "i2c.ceu"
+#include "wclock.ceu"
+#include "string.ceu"
+
+#define ADDR 0x50
+
+_Serial.begin(9600);
+
+var[20] byte sub_addr = [0];
+var[1] byte inner_addr = [0];
+var[200] byte str = [].."Following the rules can make the world in order!";
+var[20] byte rec = [];
+
+_Serial.println(str[8]);
+
+code/await EEPROM_Write(var byte chip_addr, var&[] byte tx_buf) -> bool do
+    var u8 times = $tx_buf / I2C_BUF_MAX + 1;
+    var u8 i;
+    var[I2C_BUF_MAX - 1] byte part = [];
+    loop i in [1-> times as u8] do
+        
+    end
+    var[I2C_BUF_MAX] byte tx = [chip_addr]..tx_buf;
+    var bool succeed = await I2C_Master_Send(&tx_buf, ADDR);
+    if succeed then
+        escape true;
+    else
+        escape false;
+    end
+end
+
+code/await EEPROM_Read(var&[] byte rx_buf, var byte chip_addr, var usize len) -> bool do
+    var[2] byte rec = [chip_addr];
+    await I2C_Master_Send(&rx_buf, ADDR);
+    var bool succeed = await I2C_Master_Receive(&rx_buf, ADDR, len);
+    if succeed then
+        escape true;
+    else
+        escape false;
+    end
+end
+
+loop do
+    emit I2C(on, _);
+    await I2C_Master_Send(&str, ADDR);
+    emit I2C(off, _);
+    await 10ms;
+    emit I2C(on, _);
+    await I2C_Master_Send(&sub_addr, ADDR);
+    emit I2C(off, _);
+    await 10ms;
+    emit I2C(on, _);
+    await I2C_Master_Receive(&rec, ADDR, 1);
+    emit I2C(off, _);
+    await 10ms;
+    var u8 i;
+    loop i in [1-> $rec as u8] do
+        _Serial.println(rec[i-1]);
+        _Serial.flush();
+    end
+    await 1s;
+end
