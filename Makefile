@@ -12,10 +12,11 @@ endif
 ifdef CEU_SRC
 CEU_SRC_ = $(CEU_SRC)
 ifneq ("$(wildcard $(CEU_SRC)/main.ceu)","")
-	CEU_SRC_ = $(CEU_SRC)/main.ceu
+CEU_SRC_ = $(CEU_SRC)/main.ceu
 endif
 else
-$(error missing `CEU_SRC` path to compile)
+CEU_SRC = ./main.ceu
+#$(error missing `CEU_SRC` path to compile)
 endif
 
 PRESERVE = --preserve-temp-files
@@ -57,6 +58,9 @@ all: ceu c
 # ifdef IDE
 # endif
 
+cu:
+	cu -l $(ARD_PORT) -s 9600
+
 ifndef IDE
 c:
 	$(ARD_EXE) --verbose $(PRESERVE) $(ARD_PREFS)                              \
@@ -78,4 +82,4 @@ pre:
 	ceu --pre --pre-args="-include ./include/arduino/arduino.ceu -include ./libraries/arch-$(ARD_ARCH)/$(ARD_ARCH).ceu $(CEU_INCS) $(CEU_DEFS) -DCEUMAKER_ARDUINO -DARDUINO_ARCH_$(ARD_ARCH_UPPER) -DARDUINO_MCU_$(ARD_MCU_UPPER) -DARDUINO_BOARD_$(ARD_BOARD_UPPER)" --pre-input="$(CEU_SRC_)"		
 endif
 
-.PHONY: all ceu c
+.PHONY: all ceu c cu

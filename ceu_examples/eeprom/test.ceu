@@ -1,0 +1,26 @@
+#include "i2c.ceu"
+#include "wclock.ceu"
+
+
+var[20] byte d = [];
+_Serial.begin(9600);
+var u8 w_addr = 0xA0;
+var u8 r_addr = 0xA1;
+
+code/await Main(none) -> none do
+    emit I2C(on, _);
+    outer.d = [0xA0];
+    await I2C_Master_Send(&outer.d, outer.w_addr);
+    var[20] byte str = [];
+    await I2C_Master_Receive(&str, outer.w_addr, 1);
+    var u8 i;
+    loop i in [1-> $str as u8] do
+        _Serial.println(str[i-1]);
+        _Serial.flush();
+    end
+end
+
+loop do
+    await 1s;
+    await Main();
+end
