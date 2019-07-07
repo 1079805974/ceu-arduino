@@ -9,16 +9,16 @@ emit I2C(on, _);
 code/await EEPROM_Read(var&[] byte rx_buf, var byte chip_addr, var usize len) -> bool do
     var[1] byte temp = [chip_addr];
     await I2C_Master_Send(&temp, ADDR);
-    await I2C_Master_Receive(&real_rx, ADDR, len);
+    await I2C_Master_Receive(&rx_buf, ADDR, len);
 end
 //code 1
-var[20] byte rx = [];
-loop do
-    var[1] byte temp = [0];
-    await I2C_Master_Send(&temp, ADDR);
-    await I2C_Master_Receive(&rx, ADDR, 10);
-    await 2s;
-end
+// var[20] byte rx = [];
+// loop do
+//     var[1] byte temp = [0];
+//     await I2C_Master_Send(&temp, ADDR);
+//     await I2C_Master_Receive(&rx, ADDR, 10);
+//     await 2s;
+// end
 //code 2
 var[20] byte rx = [];
 loop do
