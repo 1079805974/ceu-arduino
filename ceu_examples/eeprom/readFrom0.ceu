@@ -1,0 +1,26 @@
+#include "i2c.ceu"
+#include "wclock.ceu"
+
+#define ADDR 0x50
+
+var[2] byte str = [0,22];
+var[1] byte sub_addr = [0];
+_Serial.begin(9600);
+emit I2C(on, _);
+
+loop do
+    // await I2C_Master_Send(&str, ADDR);
+    // //emit I2C(off, _);
+    // await 10ms;
+    //emit I2C(on, _);
+    var byte chip_addr = 0;
+    var[1] byte temp = [chip_addr];
+    await I2C_Master_Send(&temp, ADDR);
+    // await 10ms;
+    await I2C_Master_Receive(&str, ADDR, 2);
+    //emit I2C(off, _);
+    // await 10ms;
+    {Serial.println(@str[0]);}
+    _Serial.flush();
+    await 2s;
+end

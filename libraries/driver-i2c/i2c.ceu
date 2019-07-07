@@ -1,4 +1,4 @@
-#define BUF_MAX 20 // maximum buffer length
+#define I2C_BUF_MAX 20 // maximum buffer length
 
 output (on/off,u8?) I2C; // on/off of I2C with optional variable address
 

@@ -27,8 +27,8 @@ var u8 len = _;
 var u32 clock = 100000;
 var int mode = {TWI_MODE_NONE};// 0 for Write and 1 for Read
 
-var[BUF_MAX*] byte tx_buf;// transmit buffer
-var[BUF_MAX] byte rx_buf;// receive buffer
+var[I2C_BUF_MAX*] byte tx_buf;// transmit buffer
+var[I2C_BUF_MAX] byte rx_buf;// receive buffer
 
 output none I2C_START;
 output none I2C_STOP;
