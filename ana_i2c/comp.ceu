@@ -1,0 +1,22 @@
+#include "i2c.ceu"
+#include "wclock.ceu"
+
+_Serial.begin(9600);
+
+loop do
+    emit I2C(on, _);
+    await 1s;
+end
+
+//As same as below
+
+// loop do
+//     emit I2C_MASTER_RECEIVE(8,4);
+//     await I2C_DONE;
+//     var u8 i;
+//     loop i in [1-> $rx_buf as u8] do
+//         _Serial.println(rx_buf[i-1]);
+//         _Serial.flush();
+//     end
+//     await 1s;
+// end

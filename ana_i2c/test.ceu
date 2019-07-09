@@ -1,16 +1,17 @@
 #include "wclock.ceu"
 #include "out.ceu" 
 
-#define SDA OUT_04
-#define SCL OUT_05
+#define SDA OUT_05
+#define SCL OUT_04
 
-output high/low OUT_05;
 output high/low OUT_04;
+output high/low OUT_05;
 
 _Serial.begin(9600);
 
 code/await Delay(none) -> none do
-    await 5000us;
+    //await 5000us;
+    {delayMicroseconds(5000);}
 end
 
 output int SDA_IN;
@@ -47,8 +48,6 @@ end
 
 code/await I2C_Stop(none) -> none do 
     emit SDA(low);
-    emit SCL(low);
-    await Delay();
     emit SCL(high);
     await Delay();
     emit SDA(high);
@@ -65,17 +64,17 @@ end
 code/await I2C_Read(none) -> byte do
     var byte res = 0;
     var int i = _;
-    emit SDA_IN(4);
+    emit SDA_IN(5);
     loop i in [7 -> 0] do
         emit SCL(low);
         await Delay();
-        var bool temp = call Read_SDA(4);
+        var bool temp = call Read_SDA(5);
         {@res = (@res << 1) | @temp;}
         emit SCL(high);
         await Delay();
     end
     await I2C_Write_Ack();
-    emit SDA_OUT(4);
+    emit SDA_OUT(5);
     escape res;
 end
 
@@ -96,6 +95,18 @@ code/await I2C_Write(var byte b) -> none do
     await I2C_Write_Ack();
 end
 
+code/await I2C_Write_B(var bool b) -> none do
+    emit SCL(low);
+    await Delay();
+    emit SDA(b);
+    await Delay();
+    emit SCL(high);
+    await Delay();
+    emit SCL(low);
+    await Delay();
+    await I2C_Write_Ack();
+end
+
 code/await I2C_Address(var byte addr, var bool read) -> none do
     var byte t = _;
     {
@@ -111,29 +122,36 @@ code/await I2C_Address(var byte addr, var bool read) -> none do
 end
 
 code/await I2C_Read_Ack(none) -> bool do
-    emit SDA_IN(4);
+    emit SDA_IN(5);
     emit SCL(low);
-    var bool temp = call Read_SDA(4);
+    var bool temp = call Read_SDA(5);
     await Delay();
     emit SCL(high);
     await Delay();
-    emit SDA_OUT(4);
+    emit SDA_OUT(5);
     escape temp;
 end
 
 var byte addr = 8;
 loop do
     var bool res = _;
+    //await I2C_Write_Ack();
     await I2C_Start();
-    await I2C_Address(addr, false);
     res = await I2C_Read_Ack();
     _Serial.println(res);
     _Serial.flush();
-    await I2C_Start();
-    await I2C_Address(addr, true);
+    await I2C_Write(0x11);
     res = await I2C_Read_Ack();
     _Serial.println(res);
     _Serial.flush();
+    // await I2C_Address(addr, false);
+    // res = await I2C_Read_Ack();
+
+    // await I2C_Start();
+    // await I2C_Address(addr, true);
+    // res = await I2C_Read_Ack();
+    // _Serial.println(res);
+    // _Serial.flush();
     await 1s;
 end
 

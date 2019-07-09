@@ -11,7 +11,7 @@ Wait for master request data, then send 'str' array.
 
 loop do
     await I2C_SLAVE_SEND_REQUESTED;
-    var[20] byte str = [].."he";
+    var[20] byte str = [0,0];
     await I2C_Slave_Send(&str);
 end
 
