@@ -10,8 +10,8 @@ output high/low OUT_05;
 _Serial.begin(9600);
 
 code/await Delay(none) -> none do
-    //await 5000us;
-    {delayMicroseconds(5000);}
+    await 400ms;
+    //{delayMicroseconds(5000);}
 end
 
 output int SDA_IN;
