@@ -3,7 +3,6 @@
 
 import serial
 import matplotlib.pyplot as plt
-from multiprocessing import Process
 from drawnow import *
 import sys
 
