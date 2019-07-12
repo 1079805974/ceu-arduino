@@ -5,11 +5,11 @@
 
 _Serial.begin(9600);
 emit I2C(on, _);
-
 code/await EEPROM_Read(var&[] byte rx_buf, var byte chip_addr, var usize len) -> bool do
     var[1] byte temp = [chip_addr];
     await I2C_Master_Send(&temp, ADDR);
     await I2C_Master_Receive(&rx_buf, ADDR, len);
+    escape false;
 end
 //code 1
 // var[20] byte rx = [];

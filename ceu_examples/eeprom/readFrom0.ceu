@@ -16,7 +16,7 @@ loop do
     var byte chip_addr = 0;
     var[1] byte temp = [chip_addr];
     await I2C_Master_Send(&temp, ADDR);
-    // await 10ms;
+    // await 10ms;asdasdas
     await I2C_Master_Receive(&str, ADDR, 2);
     //emit I2C(off, _);
     // await 10ms;

@@ -1,11 +1,14 @@
-#include "i2c.ceu"
 #include "wclock.ceu"
 
 _Serial.begin(9600);
+var u8 i;
 
 loop do
-    emit I2C(on, _);
-    await 1s;
+loop i in [0 -> 7] do
+    _Serial.println(i);
+    _Serial.flush();
+end
+await 1s;
 end
 
 //As same as below

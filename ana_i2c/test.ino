@@ -22,9 +22,9 @@ int I2C_SCL_READ()
 
 void Delay()
 {
-    //delayMicroseconds(5);
-    //_delay_us(5);
-     delay(50);
+    //delayMicroseconds(400000);
+    //_delay_us(400 * 1000);
+    delay(400);
 }
 
 void i2c_Start(void)
@@ -57,9 +57,10 @@ void i2c_send_bit(uint8_t c){
   Delay();
   I2C_SCL_0();
   Delay();
-//  if(c != 0){
-//    I2C_SDA_0();
-//  }
+  if(c != 0){
+    I2C_SDA_0();
+    Delay();
+  }
 }
 
 void i2c_Ack(void)
@@ -251,59 +252,70 @@ void loop()
     Delay();
     
     I2C_SDA_0();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SCL_0();
     Delay();
 
     I2C_SDA_0();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SCL_0();
     Delay();    
 
     I2C_SDA_0();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SCL_0();
     Delay();
 
     I2C_SDA_1();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SCL_0();
     Delay();
+    I2C_SDA_0();
+    Delay();
 
 
     I2C_SDA_0();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SCL_0();
     Delay();
     
     I2C_SDA_0();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SCL_0();
     Delay();
     
     I2C_SDA_0();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SCL_0();
     Delay(); 
         
     I2C_SDA_0();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SCL_0();
+    Delay();
+    I2C_SDA_0();
     Delay();
 
 
     
     uint8_t res;
 
-    I2C_SDA_1();
     pinMode(SDA, INPUT); // CPU释放SDA总线
     I2C_SCL_1(); // CPU拉高SCL电平，发送一个时钟, 此时会返回ACK应答
     Delay();
@@ -318,25 +330,86 @@ void loop()
     I2C_SCL_0();
     Delay();
     pinMode(SDA, OUTPUT);
+    Serial.println(res);
+    
+    I2C_SDA_0();
+    Delay();
+    I2C_SCL_1();
+    Delay();
+    I2C_SCL_0();
+    Delay(); 
+    
+    I2C_SDA_0();
+    Delay();
+    I2C_SCL_1();
+    Delay();
+    I2C_SCL_0();
+    Delay(); 
+    
+    I2C_SDA_0();
+    Delay();
+    I2C_SCL_1();
+    Delay();
+    I2C_SCL_0();
+    Delay(); 
+    
+    I2C_SDA_0();
+    Delay();
+    I2C_SCL_1();
+    Delay();
+    I2C_SCL_0();
+    Delay(); 
+    
+    I2C_SDA_0();
+    Delay();
+    I2C_SCL_1();
+    Delay();
+    I2C_SCL_0();
+    Delay(); 
+    
+    I2C_SDA_0();
+    Delay();
+    I2C_SCL_1();
+    Delay();
+    I2C_SCL_0();
+    Delay(); 
+    
+    I2C_SDA_0();
+    Delay();
+    I2C_SCL_1();
+    Delay();
+    I2C_SCL_0();
+    Delay(); 
+    
+    I2C_SDA_0();
+    Delay();
+    I2C_SCL_1();
+    Delay();
+    I2C_SCL_0();
+    Delay(); 
+    
+    pinMode(SDA, INPUT); // CPU释放SDA总线
+    I2C_SCL_1(); // CPU拉高SCL电平，发送一个时钟, 此时会返回ACK应答
+    Delay();
+    if (I2C_SDA_READ() != 0) // 判断读取的SDA电平状态
+    {
+        res = 1;
+    }
+    else
+    {
+        res = 0; 
+    }
+    I2C_SCL_0();
+    Delay();
+    pinMode(SDA, OUTPUT);
+    Serial.println(res);
 
-
+    I2C_SDA_0();
+    Delay();
     I2C_SCL_1();
     Delay();
     I2C_SDA_1();
     Delay();
-    
-    //I2C_SDA_1();
-    //  i2c_SendByte(0x10);
-    //  i2c_SendByte(0x10);
-    //i2c_Stop();
-    //  i2c_WaitAck_Delay(5);
-    //uint8_t res = i2c_ReadByte();
-    //  i2c_Ack();
-    //  res = i2c_ReadByte();
-    //  i2c_NAck();
-    //i2c_Stop();
-    //  i2c_NAck();
-    //  //i2c_WaitAck_Delay(5);
-    Serial.println(res);
+
     delay(1000);
 }

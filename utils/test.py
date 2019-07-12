@@ -8,7 +8,7 @@ import sys
 
 n = 0
 # 生成画布
-plt.figure(figsize=(16, 12), dpi=80)
+plt.figure(figsize=(16, 12), dpi=180)
 ser = None
 # 打开交互模式
 plt.ion()
@@ -19,7 +19,7 @@ a2_list = []
 
 def new_thread():
     global n,x,a1_list,a2_list,ser
-    ser = serial.Serial('/dev/ttyUSB0', 9600)
+    ser = serial.Serial('/dev/ttyUSB1', 9600)
     print(ser)
     if ser.isOpen():
        print("open success")
@@ -40,7 +40,7 @@ def new_thread():
                 a2_list.append(int(data.split(b",")[1]))
                 drawnow(plot_thread)
 
-                if n > 100:
+                if n > 50:
                     x.pop(0)
                     a1_list.pop(0)
                     a2_list.pop(0)
