@@ -16,7 +16,7 @@ loop do
         await I2C_Master_Receive(&str, 8, 1);
         var u8 i;
         loop i in [1-> $str as u8] do
-            _Serial.println(rx_buf[i-1]);
+            _Serial.println(str[i-1]);
             _Serial.flush();
         end
         await 1s;
