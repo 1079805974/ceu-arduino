@@ -1,9 +1,11 @@
 # I2C Library Test
 
-This folder contains the I2C driver tests, and you can learn the basic usage of the driver.
+This folder contains the I2C driver examples, and you can learn the basic usage of the driver.
 
 ## Hardware Requirements
+
 Two Arduinos needed, connected as follows.
+
 - A4 -> A4
 - A5 -> A5
 - GND -> GND
