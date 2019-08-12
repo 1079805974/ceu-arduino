@@ -1,0 +1,441 @@
+#define SS 10
+#define RST 9
+
+#define _DEBUG(x) _Serial.println(x);_Serial.flush();
+
+#include "spi.ceu"
+
+#include "out.ceu"
+#include "wclock.ceu"
+
+#include "rc522_reg.ceu"
+#include "rc522_cmd.ceu"
+
+{pinMode(SS, OUTPUT);}
+
+_Serial.begin(9600);
+
+/*
+void MFrc522::PCD_WriteRegister(	PCD_Register reg,	///< The register to write to. One of the PCD_Register enums.
+									byte value			///< The value to write.
+								) {
+	SPI.beginTransaction(SPISettings(MFrc522_SPICLOCK, MSBFIRST, SPI_MODE0));	// Set the settings to work with SPI bus
+	digitalWrite(_chipSelectPin, LOW);		// Select slave
+	SPI.transfer(reg);						// MSB == 0 is for writing. LSB is not used in address. Datasheet section 8.1.2.3.
+	SPI.transfer(value);
+	digitalWrite(_chipSelectPin, HIGH);		// Release slave again
+	SPI.endTransaction(); // Stop using the SPI bus
+} // End PCD_WriteRegister()
+ */
+
+code/await PCD_WriteRegister(var byte reg, var byte value) -> none do
+    watching SPI_Transaction(1400000, SPI_MSBFIRST, SPI_MODE0, _, _) do
+        {digitalWrite(SS, LOW);}
+        await SPI_Transfer_8(reg);
+        await SPI_Transfer_8(value);
+        {digitalWrite(SS, HIGH);}
+        _DEBUG("set reg");
+    end
+end
+
+// void MFRC522::PCD_WriteRegister(	PCD_Register reg,	///< The register to write to. One of the PCD_Register enums.
+// 									byte count,			///< The number of bytes to write to the register
+// 									byte *values		///< The values to write. Byte array.
+// 								) {
+// 	SPI.beginTransaction(SPISettings(MFRC522_SPICLOCK, MSBFIRST, SPI_MODE0));	// Set the settings to work with SPI bus
+// 	digitalWrite(_chipSelectPin, LOW);		// Select slave
+// 	SPI.transfer(reg);						// MSB == 0 is for writing. LSB is not used in address. Datasheet section 8.1.2.3.
+// 	for (byte index = 0; index < count; index++) {
+// 		SPI.transfer(values[index]);
+// 	}
+// 	digitalWrite(_chipSelectPin, HIGH);		// Release slave again
+// 	SPI.endTransaction(); // Stop using the SPI bus
+// } // End PCD_WriteRegister()
+
+code/await PCD_WriteRegister2(var byte reg, var usize count, var&[] byte tx) -> none do
+    watching SPI_Transaction(1400000, SPI_MSBFIRST, SPI_MODE0, _, _) do
+        {digitalWrite(SS, LOW);}
+        await SPI_Transfer_8(reg);
+        var u8 i = _;
+        loop i in [1 -> count as u8] do
+            await SPI_Transfer_8(tx[i-1]);
+        end
+        {digitalWrite(SS, HIGH);}
+        _DEBUG("set reg");
+    end
+end
+
+/*
+byte MFrc522::PCD_ReadRegister(	PCD_Register reg	///< The register to read from. One of the PCD_Register enums.
+								) {
+	byte value;
+	SPI.beginTransaction(SPISettings(MFrc522_SPICLOCK, MSBFIRST, SPI_MODE0));	// Set the settings to work with SPI bus
+	digitalWrite(_chipSelectPin, LOW);			// Select slave
+	SPI.transfer(0x80 | reg);					// MSB == 1 is for reading. LSB is not used in address. Datasheet section 8.1.2.3.
+	value = SPI.transfer(0);					// Read the value back. Send 0 to stop reading.
+	digitalWrite(_chipSelectPin, HIGH);			// Release slave again
+	SPI.endTransaction(); // Stop using the SPI bus
+	return value;
+} // End PCD_ReadRegister()
+    */
+
+code/await PCD_ReadRegister(var byte reg) -> byte do
+    var byte res = _;
+    watching SPI_Transaction(1400000, SPI_MSBFIRST, SPI_MODE0, _, _) do
+        {digitalWrite(SS, LOW);}
+        await SPI_Transfer_8(0x80 | reg);
+        res = await SPI_Transfer_8(_);
+        {digitalWrite(SS, HIGH);}
+        _DEBUG("read reg");
+    end
+    escape res;
+end
+
+code/await PCD_ReadRegister2(var byte reg, var usize len, var&[] byte buf, var usize offset) -> none do
+    var byte res = _;
+    watching SPI_Transaction(1400000, SPI_MSBFIRST, SPI_MODE0, _, _) do
+        {digitalWrite(SS, LOW);}
+        await SPI_Transfer_8(0x80 | reg);
+        res = await SPI_Transfer_8(_);
+        {digitalWrite(SS, HIGH);}
+        _DEBUG("read reg");
+    end
+    escape res;
+end
+/**
+ * Initializes the MFrc522 chip.
+ 
+void MFrc522::PCD_Init() {
+	bool hardReset = false;
+
+	// Set the chipSelectPin as digital output, do not select the slave yet
+	pinMode(_chipSelectPin, OUTPUT);
+	digitalWrite(_chipSelectPin, HIGH);
+	
+	// If a valid pin number has been set, pull device out of power down / reset state.
+	if (_resetPowerDownPin != UNUSED_PIN) {
+		// First set the resetPowerDownPin as digital input, to check the MFrc522 power down mode.
+		pinMode(_resetPowerDownPin, INPUT);
+	
+		if (digitalRead(_resetPowerDownPin) == LOW) {	// The MFrc522 chip is in power down mode.
+			pinMode(_resetPowerDownPin, OUTPUT);		// Now set the resetPowerDownPin as digital output.
+			digitalWrite(_resetPowerDownPin, LOW);		// Make shure we have a clean LOW state.
+			delayMicroseconds(2);				// 8.8.1 Reset timing requirements says about 100ns. Let us be generous: 2μsl
+			digitalWrite(_resetPowerDownPin, HIGH);		// Exit power down mode. This triggers a hard reset.
+			// Section 8.8.2 in the datasheet says the oscillator start-up time is the start up time of the crystal + 37,74μs. Let us be generous: 50ms.
+			delay(50);
+			hardReset = true;
+		}
+	}
+
+	if (!hardReset) { // Perform a soft reset if we haven't triggered a hard reset above.
+		PCD_Reset();
+	}
+	
+	// Reset baud rates
+	PCD_WriteRegister(TxModeReg, 0x00);
+	PCD_WriteRegister(RxModeReg, 0x00);
+	// Reset ModWidthReg
+	PCD_WriteRegister(ModWidthReg, 0x26);
+
+	// When communicating with a PICC we need a timeout if something goes wrong.
+	// f_timer = 13.56 MHz / (2*TPreScaler+1) where TPreScaler = [TPrescaler_Hi:TPrescaler_Lo].
+	// TPrescaler_Hi are the four low bits in TModeReg. TPrescaler_Lo is TPrescalerReg.
+	PCD_WriteRegister(TModeReg, 0x80);			// TAuto=1; timer starts automatically at the end of the transmission in all communication modes at all speeds
+	PCD_WriteRegister(TPrescalerReg, 0xA9);		// TPreScaler = TModeReg[3..0]:TPrescalerReg, ie 0x0A9 = 169 => f_timer=40kHz, ie a timer period of 25μs.
+	PCD_WriteRegister(TReloadRegH, 0x03);		// Reload timer with 0x3E8 = 1000, ie 25ms before timeout.
+	PCD_WriteRegister(TReloadRegL, 0xE8);
+	
+	PCD_WriteRegister(TxASKReg, 0x40);		// Default 0x00. Force a 100 % ASK modulation independent of the ModGsPReg register setting
+	PCD_WriteRegister(ModeReg, 0x3D);		// Default 0x3F. Set the preset value for the CRC coprocessor for the CalcCRC command to 0x6363 (ISO 14443-3 part 6.2.4)
+	PCD_AntennaOn();						// Enable the antenna driver pins TX1 and TX2 (they were disabled by the reset)
+} // End PCD_Init()
+ **/
+
+code/await PCD_AntennaOn(none) -> none do
+    var byte value = await PCD_ReadRegister(outer.rc522_TxControlReg);
+	if ((value & 0x03) != 0x03) then
+		await PCD_WriteRegister(outer.rc522_TxControlReg, value | 0x03);
+    end
+end
+
+code/await PCD_Init(none)-> none do
+    var bool hardReset = false;
+    {
+        pinMode(SS, OUTPUT);
+	    digitalWrite(SS, HIGH);
+    }
+    {
+        // First set the resetPowerDownPin as digital input, to check the MFrc522 power down mode.
+		pinMode(RST, INPUT);
+	
+		if (digitalRead(RST) == LOW) {	// The MFrc522 chip is in power down mode.
+			pinMode(RST, OUTPUT);		// Now set the resetPowerDownPin as digital output.
+			digitalWrite(RST, LOW);		// Make shure we have a clean LOW state.
+			delayMicroseconds(2);				// 8.8.1 Reset timing requirements says about 100ns. Let us be generous: 2μsl
+			digitalWrite(RST, HIGH);		// Exit power down mode. This triggers a hard reset.
+			// Section 8.8.2 in the datasheet says the oscillator start-up time is the start up time of the crystal + 37,74μs. Let us be generous: 50ms.
+			delay(50);
+			hardReset = true;
+		}
+    }
+    if hardReset then
+        //TODO softReset()
+    end
+    // Reset baud rates
+	await PCD_WriteRegister(outer.rc522_TxModeReg, 0x00);
+	await PCD_WriteRegister(outer.rc522_RxModeReg, 0x00);
+	// Reset ModWidthReg
+	await PCD_WriteRegister(outer.rc522_ModWidthReg, 0x26);
+
+	// When communicating with a PICC we need a timeout if something goes wrong.
+	// f_timer = 13.56 MHz / (2*TPreScaler+1) where TPreScaler = [TPrescaler_Hi:TPrescaler_Lo].
+	// TPrescaler_Hi are the four low bits in TModeReg. TPrescaler_Lo is TPrescalerReg.
+	await PCD_WriteRegister(outer.rc522_TModeReg, 0x80);			// TAuto=1; timer starts automatically at the end of the transmission in all communication modes at all speeds
+	await PCD_WriteRegister(outer.rc522_TPrescalerReg, 0xA9);		// TPreScaler = TModeReg[3..0]:TPrescalerReg, ie 0x0A9 = 169 => f_timer=40kHz, ie a timer period of 25μs.
+	await PCD_WriteRegister(outer.rc522_TReloadRegH, 0x03);		// Reload timer with 0x3E8 = 1000, ie 25ms before timeout.
+	await PCD_WriteRegister(outer.rc522_TReloadRegL, 0xE8);
+	
+	await PCD_WriteRegister(outer.rc522_TxASKReg, 0x40);		// Default 0x00. Force a 100 % ASK modulation independent of the ModGsPReg register setting
+	await PCD_WriteRegister(outer.rc522_ModeReg, 0x3D);		// Default 0x3F. Set the preset value for the CRC coprocessor for the CalcCRC command to 0x6363 (ISO 14443-3 part 6.2.4)
+	await PCD_AntennaOn();						// Enable the antenna driver pins TX1 and TX2 (they were disabled by the reset)
+end
+
+/**
+ * Clears the bits given in mask from register reg.
+
+void MFRC522::PCD_ClearRegisterBitMask(	PCD_Register reg,	///< The register to update. One of the PCD_Register enums.
+										byte mask			///< The bits to clear.
+									  ) {
+	byte tmp;
+	tmp = PCD_ReadRegister(reg);
+	PCD_WriteRegister(reg, tmp & (~mask));		// clear bit mask
+} // End PCD_ClearRegisterBitMask()
+ **/
+ code/await PCD_ClearRegisterBitMask(var byte reg, var byte mask) -> none do 
+    var byte tmp;
+	tmp = await PCD_ReadRegister(reg);
+	await PCD_WriteRegister(reg, tmp & (~mask));		// clear bit mask
+ end
+
+
+code/await PCD_SetRegisterBitMask(var byte reg, var byte mask) -> none do 
+    var byte tmp;
+	tmp = await PCD_ReadRegister(reg);
+	await PCD_WriteRegister(reg, tmp | mask);			// set bit mask
+end
+
+/**
+ * Executes the Transceive command.
+ * CRC validation can only be done if backData and backLen are specified.
+ * 
+ * @return STATUS_OK on success, STATUS_??? otherwise.
+
+MFRC522::StatusCode MFRC522::PCD_TransceiveData(	byte *sendData,		///< Pointer to the data to transfer to the FIFO.
+													byte sendLen,		///< Number of bytes to transfer to the FIFO.
+													byte *backData,		///< nullptr or pointer to buffer if data should be read back after executing the command.
+													byte *backLen,		///< In: Max number of bytes to write to *backData. Out: The number of bytes returned.
+													byte *validBits,	///< In/Out: The number of valid bits in the last byte. 0 for 8 valid bits. Default nullptr.
+													byte rxAlign,		///< In: Defines the bit position in backData[0] for the first bit received. Default 0.
+													bool checkCRC		///< In: True => The last two bytes of the response is assumed to be a CRC_A that must be validated.
+								 ) {
+	byte waitIRq = 0x30;		// RxIRq and IdleIRq
+	return PCD_CommunicateWithPICC(PCD_Transceive, waitIRq, sendData, sendLen, backData, backLen, validBits, rxAlign, checkCRC);
+} // End PCD_TransceiveData()
+ **/
+
+code/await PCD_CommunicateWithPICC(var byte command,		///< The command to execute. One of the PCD_Command enums.
+                                    var byte waitIRq,		///< The bits in the ComIrqReg register that signals successful completion of the command.
+                                    var&[] byte sendData,		///< Pointer to the data to transfer to the FIFO.
+                                    var usize sendLen,		///< Number of bytes to transfer to the FIFO.
+                                    var&[] byte backData,		///< nullptr or pointer to buffer if data should be read back after executing the command.
+                                    var byte backLen,		///< In: Max number of bytes to write to *backData. Out: The number of bytes returned.
+                                    var byte validBits,	///< In/Out: The number of valid bits in the last byte. 0 for 8 valid bits.
+                                    var byte rxAlign,		///< In: Defines the bit position in backData[0] for the first bit received. Default 0.
+                                    var bool checkCRC) -> byte do 
+    var byte txLastBits = validBits;
+	var byte bitFraming = (rxAlign << 4) + txLastBits;		// RxAlign = BitFramingReg[6..4]. TxLastBits = BitFramingReg[2..0]
+	
+	await PCD_WriteRegister(outer.rc522_CommandReg, 0x00);			// Stop any active command.
+	await PCD_WriteRegister(outer.rc522_ComIrqReg, 0x7F);					// Clear all seven interrupt request bits
+	await PCD_WriteRegister(outer.rc522_FIFOLevelReg, 0x80);				// FlushBuffer = 1, FIFO initialization
+	await PCD_WriteRegister2(outer.rc522_FIFODataReg, sendLen, &sendData);	// Write sendData to the FIFO
+	await PCD_WriteRegister(outer.rc522_BitFramingReg, bitFraming);		// Bit adjustments
+	await PCD_WriteRegister(outer.rc522_CommandReg, command);	
+    if (command == outer.rc522_PCD_Transceive) then
+		await PCD_SetRegisterBitMask(outer.rc522_BitFramingReg, 0x80);	// StartSend=1, transmission of data starts
+	end
+    await 36ms;
+    var byte t = await PCD_ReadRegister(outer.rc522_ComIrqReg);
+    if (t & 0x01) then				// Timer interrupt - nothing received in 25ms
+        escape 2;
+    end
+    var byte errorRegValue = PCD_ReadRegister(outer.rc522_ErrorReg); // ErrorReg[7..0] bits are: WrErr TempErr reserved BufferOvfl CollErr CRCErr ParityErr ProtocolErr
+	if (errorRegValue & 0x13) {	 // BufferOvfl ParityErr ProtocolErr
+		escape -1;
+	} 
+
+    var byte _validBits = 0;
+	
+	// If the caller wants data back, get it from the MFRC522.
+	if (backLen > 0) then
+		var byte n = await PCD_ReadRegister(outer.rc522_FIFOLevelReg);	// Number of bytes in the FIFO
+		if (n > backLen) {
+			escape 4;
+		}
+		// *backLen = n;											// Number of bytes returned
+		await PCD_ReadRegister2(outer.rc522_FIFODataReg, n, backData, rxAlign);	// Get received data from FIFO
+		_validBits = await PCD_ReadRegister(outer.rc522_ControlReg) & 0x07;		// RxLastBits[2:0] indicates the number of valid bits in the last received byte. If this value is 000b, the whole byte is valid.
+		if (validBits) {
+			*validBits = _validBits;
+		}
+	end
+end
+    /**
+    if (command == PCD_Transceive) {
+		PCD_SetRegisterBitMask(BitFramingReg, 0x80);	// StartSend=1, transmission of data starts
+	}
+	
+	// Wait for the command to complete.
+	// In PCD_Init() we set the TAuto flag in TModeReg. This means the timer automatically starts when the PCD stops transmitting.
+	// Each iteration of the do-while-loop takes 17.86μs.
+	// TODO check/modify for other architectures than Arduino Uno 16bit
+	uint16_t i;
+	for (i = 2000; i > 0; i--) {
+		byte n = PCD_ReadRegister(ComIrqReg);	// ComIrqReg[7..0] bits are: Set1 TxIRq RxIRq IdleIRq HiAlertIRq LoAlertIRq ErrIRq TimerIRq
+		if (n & waitIRq) {					// One of the interrupts that signal success has been set.
+			break;
+		}
+		if (n & 0x01) {						// Timer interrupt - nothing received in 25ms
+			return STATUS_TIMEOUT;
+		}
+	}
+	// 35.7ms and nothing happend. Communication with the MFRC522 might be down.
+	if (i == 0) {
+		return STATUS_TIMEOUT;
+	}
+	
+	// Stop now if any errors except collisions were detected.
+	byte errorRegValue = PCD_ReadRegister(ErrorReg); // ErrorReg[7..0] bits are: WrErr TempErr reserved BufferOvfl CollErr CRCErr ParityErr ProtocolErr
+	if (errorRegValue & 0x13) {	 // BufferOvfl ParityErr ProtocolErr
+		return STATUS_ERROR;
+	}
+  
+	byte _validBits = 0;
+	
+	// If the caller wants data back, get it from the MFRC522.
+	if (backData && backLen) {
+		byte n = PCD_ReadRegister(FIFOLevelReg);	// Number of bytes in the FIFO
+		if (n > *backLen) {
+			return STATUS_NO_ROOM;
+		}
+		*backLen = n;											// Number of bytes returned
+		PCD_ReadRegister(FIFODataReg, n, backData, rxAlign);	// Get received data from FIFO
+		_validBits = PCD_ReadRegister(ControlReg) & 0x07;		// RxLastBits[2:0] indicates the number of valid bits in the last received byte. If this value is 000b, the whole byte is valid.
+		if (validBits) {
+			*validBits = _validBits;
+		}
+	}
+	
+	// Tell about collisions
+	if (errorRegValue & 0x08) {		// CollErr
+		return STATUS_COLLISION;
+	}
+	
+	// Perform CRC_A validation if requested.
+	if (backData && backLen && checkCRC) {
+		// In this case a MIFARE Classic NAK is not OK.
+		if (*backLen == 1 && _validBits == 4) {
+			return STATUS_MIFARE_NACK;
+		}
+		// We need at least the CRC_A value and all 8 bits of the last byte must be received.
+		if (*backLen < 2 || _validBits != 0) {
+			return STATUS_CRC_WRONG;
+		}
+		// Verify CRC_A - do our own calculation and store the control in controlBuffer.
+		byte controlBuffer[2];
+		MFRC522::StatusCode status = PCD_CalculateCRC(&backData[0], *backLen - 2, &controlBuffer[0]);
+		if (status != STATUS_OK) {
+			return status;
+		}
+		if ((backData[*backLen - 2] != controlBuffer[0]) || (backData[*backLen - 1] != controlBuffer[1])) {
+			return STATUS_CRC_WRONG;
+		}
+	}
+	
+	return STATUS_OK;
+} // End PCD_CommunicateWithPICC() 
+ **/
+
+
+code/await PCD_TransceiveData(var&[] byte sendData, 
+                              var&[] byte backData, 
+                              var usize backlen,
+                              var byte validBits,
+                              var byte rxAlign,
+                              var bool checkCRC 
+                             ) -> byte do 
+    var byte waitIRq = 0x30;		// RxIRq and IdleIRq
+    var byte res = await PCD_CommunicateWithPICC(outer.rc522_PCD_Transceive, waitIRq, sendData, sendLen, backData, backLen, validBits, rxAlign, checkCRC);
+	escape res;
+end
+
+
+/**
+ * Returns true if a PICC responds to PICC_CMD_REQA.
+ * Only "new" cards in state IDLE are invited. Sleeping cards in state HALT are ignored.
+ * 
+ * @return bool
+ 
+bool MFRC522::PICC_IsNewCardPresent() {
+	byte bufferATQA[2];
+	byte bufferSize = sizeof(bufferATQA);
+
+	// Reset baud rates
+	PCD_WriteRegister(TxModeReg, 0x00);
+	PCD_WriteRegister(RxModeReg, 0x00);
+	// Reset ModWidthReg
+	PCD_WriteRegister(ModWidthReg, 0x26);
+
+	MFRC522::StatusCode result = PICC_RequestA(bufferATQA, &bufferSize);
+	return (result == STATUS_OK || result == STATUS_COLLISION);
+} // End PICC_IsNewCardPresent()
+ **/
+
+//  MFRC522::StatusCode MFRC522::PICC_REQA_or_WUPA(	byte command, 		///< The command to send - PICC_CMD_REQA or PICC_CMD_WUPA
+// 												byte *bufferATQA,	///< The buffer to store the ATQA (Answer to request) in
+// 												byte *bufferSize	///< Buffer size, at least two bytes. Also number of bytes returned if STATUS_OK.
+// 											) {
+// 	byte validBits;
+// 	MFRC522::StatusCode status;
+	
+// 	if (bufferATQA == nullptr || *bufferSize < 2) {	// The ATQA response is 2 bytes long.
+// 		return STATUS_NO_ROOM;
+// 	}
+// 	PCD_ClearRegisterBitMask(CollReg, 0x80);		// ValuesAfterColl=1 => Bits received after collision are cleared.
+// 	validBits = 7;									// For REQA and WUPA we need the short frame format - transmit only 7 bits of the last (and only) byte. TxLastBits = BitFramingReg[2..0]
+// 	status = PCD_TransceiveData(&command, 1, bufferATQA, bufferSize, &validBits);
+// 	if (status != STATUS_OK) {
+// 		return status;
+// 	}
+// 	if (*bufferSize != 2 || validBits != 0) {		// ATQA must be exactly 16 bits.
+// 		return STATUS_ERROR;
+// 	}
+// 	return STATUS_OK;
+// } // End PICC_REQA_or_WUPA()
+
+code/await PICC_REQA_or_WUPA(var byte command, var&[] byte bufATQA, var usize len) -> none do
+    var byte validBits;var byte status;
+    await PCD_ClearRegisterBitMask(outer.rc522_CollReg, 0x80);
+    validBits = 7;
+
+end
+
+code/await PICC_RequestA(var&[] byte buf, var usize len) -> byte do
+
+end
+
+code/await PICC_IsNewCardPresent(none) -> none do
+    var[2] byte buf = _;
+
+end
