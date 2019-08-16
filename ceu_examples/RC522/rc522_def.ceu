@@ -1,5 +1,5 @@
-#define _DEBUG_D(x) _Serial.println(x);_Serial.flush();
-#define _DEBUG_V(x) _Serial.println(x);_Serial.flush();
+#define _DEBUG_D(x) {}//_Serial.println(x);_Serial.flush();
+#define _DEBUG_V(x) {}//_Serial.println(x);_Serial.flush();
 #define _DEBUG_I(x) _Serial.println(x);_Serial.flush();
 #define _TMP_DBG(x) _Serial.println(x);_Serial.flush();
 

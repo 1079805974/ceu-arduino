@@ -1,6 +1,7 @@
 
 var byte rc522_validBits = 0;
-var[9] byte rc522_uid = _;
+var[9] byte rc522_uid = [0,1,2,3,4,5,6,7,8];
+var byte rc522_sak = 0;
 
 code/await PCD_WriteRegister(var byte reg, var byte value) -> none do
     watching SPI_Transaction(1400000, SPI_MSBFIRST, SPI_MODE0, _, _) do
@@ -25,8 +26,8 @@ code/await PCD_WriteRegister2(var byte reg, var usize count, var&[] byte tx) -> 
     watching SPI_Transaction(1400000, SPI_MSBFIRST, SPI_MODE0, _, _) do
         {digitalWrite(SS, LOW);}
         await SPI_Transfer_8(reg);
-        var u8 i = _;
-        loop i in [1 -> count as u8] do
+        var usize i = _;
+        loop i in [1 -> count] do
             await SPI_Transfer_8(tx[i-1]);
         end
         {digitalWrite(SS, HIGH);}

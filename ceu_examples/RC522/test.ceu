@@ -43,13 +43,13 @@ code/await PICC_IsNewCardPresent(none) -> bool do
 	await PCD_WriteRegister(outer.rc522_ModWidthReg, 0x26);
 
 	var byte result = await PICC_RequestA(&buf, 2);
-	_DEBUG_I(result);
 	escape ((result == STATUS_OK) or (result == STATUS_COLLISION));
 end
 
 code/await PICC_Select(var&[] byte uid, var usize uid_size, var byte validBits) -> byte do 
-	var bool uidComplete = _;
-	var bool selectDone = _;
+	_DEBUG_D("PICC_Select")
+	var bool uidComplete = false;
+	var bool selectDone = false;
 	var bool useCascadeTag = _;
 	var byte cascadeLevel = 1;
 	var byte result = _;
@@ -62,7 +62,7 @@ code/await PICC_Select(var&[] byte uid, var usize uid_size, var byte validBits) 
 	var byte bufferUsed = _;				// The number of bytes used in the buffer, ie the number of bytes to transfer to the FIFO.
 	var byte rxAlign = _;					// Used in BitFramingReg. Defines the bit position for the first bit received.
 	var byte txLastBits = _;				// Used in BitFramingReg. The number of valid bits in the last transmitted byte. 
-	var[9] byte responseBuffer = _;
+	var[9] byte responseBuffer = [0,1,2,3,4,5,6,7,8];
 	var byte responseLength = _;
 	
 	if $uid < uid_size then
@@ -76,6 +76,7 @@ code/await PICC_Select(var&[] byte uid, var usize uid_size, var byte validBits) 
 	await PCD_ClearRegisterBitMask(outer.rc522_CollReg, 0x80);
 	loop do 
 		if uidComplete then break; end
+
 		if cascadeLevel == 1 then
 			buffer[0] = outer.rc522_PICC_CMD_SEL_CL1;
 			uidIndex = 0;
@@ -127,8 +128,9 @@ code/await PICC_Select(var&[] byte uid, var usize uid_size, var byte validBits) 
 		end
 		loop do
 			if selectDone then break; end
+
 			if (currentLevelKnownBits >= 32) then // All UID bits in this Cascade Level are known. This is a SELECT.
-				//Serial.print(F("SELECT: currentLevelKnownBits=")); Serial.println(currentLevelKnownBits, DEC);
+				{Serial.print("SELECT: currentLevelKnownBits="); Serial.println(@currentLevelKnownBits, DEC);}
 				buffer[1] = 0x70; // NVB - Number of Valid Bits: Seven whole bytes
 				// Calculate BCC - Block Check Character
 				buffer[6] = buffer[2] ^ buffer[3] ^ buffer[4] ^ buffer[5];
@@ -146,8 +148,10 @@ code/await PICC_Select(var&[] byte uid, var usize uid_size, var byte validBits) 
 				responseBuffer	= [buffer[6], buffer[7], buffer[8]];
 				responseLength	= 3;
 			else  // This is an ANTICOLLISION.
-				_DEBUG_D("ANTICOLLISION: currentLevelKnownBits=")
-				{Serial.println(@currentLevelKnownBits, DEC);}
+				{
+					Serial.print("ANTICOLLISION: currentLevelKnownBits=");
+					Serial.println(@currentLevelKnownBits, DEC);
+				}
 
 				txLastBits		= currentLevelKnownBits % 8;
 				count			= currentLevelKnownBits / 8;	// Number of whole bytes in the UID part.
@@ -164,6 +168,23 @@ code/await PICC_Select(var&[] byte uid, var usize uid_size, var byte validBits) 
 			await PCD_WriteRegister(outer.rc522_BitFramingReg, (rxAlign << 4) + txLastBits);	// RxAlign = BitFramingReg[6..4]. TxLastBits = BitFramingReg[2..0]
 
 			result = await PCD_TransceiveData(&buffer, bufferUsed as usize, &responseBuffer, responseLength as usize, txLastBits as usize, rxAlign as usize, false);
+			if currentLevelKnownBits >= 32 then
+				buffer[6] = responseBuffer[0];
+				buffer[7] = responseBuffer[1];
+				buffer[8] = responseBuffer[2];
+			else
+				// var usize tttt;
+				// loop tttt in [1 -> ($responseBuffer)] do
+				// 	_Serial.print("B:");
+				// 	_TMP_DBG(responseBuffer[tttt - 1])
+				// end
+				// _TMP_DBG(responseLength)
+
+				var byte count3;
+				loop count3 in [1 -> responseLength] do
+					buffer[count3 + index - 1] = responseBuffer[count3 - 1];
+				end
+			end
 			if result == STATUS_COLLISION then // More than one PICC in the field => collision.
 				var byte valueOfCollReg = await PCD_ReadRegister(outer.rc522_CollReg); // CollReg[7..0] bits are: ValuesAfterColl reserved CollPosNotValid CollPos[4:0]
 				if valueOfCollReg & 0x20 != 0 then // CollPosNotValid
@@ -189,6 +210,11 @@ code/await PICC_Select(var&[] byte uid, var usize uid_size, var byte validBits) 
 			else  // STATUS_OK
 				if (currentLevelKnownBits >= 32) then // This was a SELECT.
 					selectDone = true; // No more anticollision 
+					// var usize ttt;
+					// loop ttt in [1 -> $responseBuffer] do
+					// 	_TMP_DBG(":")
+					// 	_TMP_DBG(responseBuffer[ttt - 1])
+					// end
 					// We continue below outside the while.
 				else  // This was an ANTICOLLISION.
 					// We now have all 32 bits of the UID in this Cascade Level
@@ -197,12 +223,53 @@ code/await PICC_Select(var&[] byte uid, var usize uid_size, var byte validBits) 
 				end
 			end
 		end
+		
+		index = 2;
+		bytesToCopy = 4;
+		_TMP_DBG("bytesToCopy")
+		if buffer[2] == outer.rc522_PICC_CMD_CT then
+			index = 3;
+			bytesToCopy = 3;
+		end
+		var byte count2;
+		loop count2 in [1 -> bytesToCopy] do
+			uid[uidIndex + count2 - 1] = buffer[index];
+			_Serial.print(buffer[index]);
+			_Serial.print("；");
+			_Serial.flush();
+			index = index + 1;
+		end
+
+		
+		// Check response SAK (Select Acknowledge)
+		if (responseLength != 3 or txLastBits != 0) then // SAK must be exactly 24 bits (1 byte + CRC_A).
+			escape STATUS_ERROR;
+		end
+		// Verify CRC_A - do our own calculation and store the control in buffer[2..3] - those bytes are not needed anymore.
+		var[2] byte crc_res = [0,0];
+		result = await PCD_CalculateCRC(&responseBuffer, 1, &crc_res);
+		buffer[2] = crc_res[0];
+		buffer[3] = crc_res[1];
+		if (result != STATUS_OK) then
+			escape result;
+		end
+		if ((buffer[2] != responseBuffer[1]) or (buffer[3] != responseBuffer[2])) then
+			escape STATUS_CRC_WRONG;
+		end
+		if (responseBuffer[0] & 0x04 != 0) then // Cascade bit set - UID not complete yes
+			cascadeLevel = cascadeLevel + 1;
+		else
+			uidComplete = true;
+			outer.rc522_sak = responseBuffer[0];
+		end
 	end
-	
+	escape STATUS_OK;
 end
 
 code/await PICC_ReadCardSerial(none) -> bool do
+	_DEBUG_D("PICC_ReadCardSerial")
 	var byte result = await PICC_Select(&outer.rc522_uid, 0, 0);
+	_TMP_DBG(result)
 	escape (result == STATUS_OK);
 end
 
@@ -210,6 +277,19 @@ await PCD_Init();
 
 loop do 
 	var bool res = await PICC_IsNewCardPresent();
-	_DEBUG_I(res);
+	if res then
+		_DEBUG_I("new card");
+		res = await PICC_ReadCardSerial();
+		_DEBUG_I("Serial:");
+		// _DEBUG_I(res);
+		var usize i;
+		loop i in [1 -> $rc522_uid] do
+			_Serial.print(rc522_uid[i - 1]);
+			_Serial.print(", ");
+		end
+		_Serial.println();
+	else
+		_DEBUG_I("no new card")
+	end
 	await 2s;
 end

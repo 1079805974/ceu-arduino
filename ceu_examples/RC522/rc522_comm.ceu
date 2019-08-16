@@ -50,12 +50,12 @@ code/await PCD_CommunicateWithPICC(var byte command,		///< The command to execut
 	var int i;
 	var byte n;
 	loop i in [1 -> 2000] do
-		_DEBUG_V("0.0");
 		n = await PCD_ReadRegister(outer.rc522_ComIrqReg);
 		if (n & waitIRq) != 0 then
 			break;
 		end
 		if (n & 0x01) != 0 then
+			_TMP_DBG("STATUS_TIMEOUT")
 			escape STATUS_TIMEOUT;
 		end
 	end
@@ -69,9 +69,9 @@ code/await PCD_CommunicateWithPICC(var byte command,		///< The command to execut
 	
 	// If the caller wants data back, get it from the MFRC522.
 	if (backLen > 0) then
-        _TMP_DBG("NEED BACK")
 		n = await PCD_ReadRegister(outer.rc522_FIFOLevelReg);	// Number of bytes in the FIFO
-        _TMP_DBG(n)
+		_TMP_DBG("back");
+		_TMP_DBG(n);
 		if (n > backLen) then
 			escape STATUS_NO_ROOM;
 		end
@@ -136,7 +136,6 @@ code/await PICC_REQA_or_WUPA(var byte command, var&[] byte bufferATQA, var usize
     validBits = 7;
 	var[1] byte sd = [command];
 	status = await PCD_TransceiveData(&sd, $sd, &bufferATQA, len, validBits, 0, false);
-    _DEBUG_V(status);
 	if (status != STATUS_OK) then
 		escape status;
 	end
